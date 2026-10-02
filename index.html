@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chiikawa's Sweet Snack Slither</title>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF6B8B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            background-color: #FFEBF0; /* Pastel Pink background */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            overflow: hidden;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        h1 { 
+            color: #FF6B8B; 
+            font-size: 22px; 
+            margin: 0 0 5px 0;
+        }
+        .score-container {
+            display: flex;
+            gap: 20px;
+            font-size: 16px;
+            color: #555;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        canvas {
+            background-color: #FFFDF9;
+            border: 4px solid #FFCCD5;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+            max-width: 100%;
+            height: auto;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 65px);
+            grid-template-rows: repeat(3, 65px);
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .btn {
+            background-color: #FFFFFF;
+            border: 2px solid #FFCCD5;
+            border-radius: 50%;
+            color: #FF6B8B;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            cursor: pointer;
+        }
+        .btn:active {
+            background-color: #FFEBF0;
+            transform: scale(0.95);
+        }
+        .up { grid-column: 2; grid-row: 1; }
+        .left { grid-column: 1; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 3; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🍡 Chiikawa Snack Slither 🍰</h1>
+        <div class="score-container">
+            <div>Score: <span id="score">0</span></div>
+            <div>Best: <span id="high-score">0</span></div>
+        </div>
+    </div>
+    
+    <canvas id="gameCanvas" width="320" height="320"></canvas>
+    
+    <div class="controls">
+        <div class="btn up" onclick="changeDirection('UP')">▲</div>
+        <div class="btn left" onclick="changeDirection('LEFT')">◀</div>
+        <div class="btn right" onclick="changeDirection('RIGHT')">▶</div>
+        <div class="btn down" onclick="changeDirection('DOWN')">▼</div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const gridSize = 16; 
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [{x: 10, y: 10}]; 
+        let food = {x: 5, y: 5};
+        let dx = 1; 
+        let dy = 0;
+        let score = 0;
+        let highScore = localStorage.getItem("chiikawaHighScore") || 0;
+        let gameInterval;
+
+        document.getElementById("high-score").innerText = highScore;
+
+        // --- COMPATIBILITY BASE64 GRAPHICS ---
+        const hachiwareImg = new Image();
+        hachiwareImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiLz48cGF0aCBkPSJNMSA1UTggLTEgMTUgNUwxNSAxUTggLTIgMSAxWiIgZmlsbD0iI0EwRTdFNSIvPjxjaXJjbGUgY3g9IjUiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PGNpcmNsZSBjeD0iMTEiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PHBhdGggZD0iTTUgMTBRIDggMTIgMTEgMTAiIHN0cm9rZT0iMomMMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjgiLz48L3N2Zz4=";
+
+        const chiikawaImg = new Image();
+        chiikawaImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48Y2lyY2xlIGN4PSI1IiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9I0ExIiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjQiIGN5PSI4LjUiIHI9IjEiIGZpbGw9IiNGRkNDRDUiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPjxwYXRoIGQ9Ik02LjUgMTBRIDggMTEgOS41IDEwIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
+
+        const usagiImg = new Image();
+        usagiImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHJlY3QgeD0iMyIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48cmVjdCB4PSIxMSIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48Y2lyY2xlIGN4PSI4IiBjeT0iOSIgcj0iNi51IiBmaWxsPSIjRkZGNUUxIi8+PGNpcmNsZSBjeD0iNSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSIxMSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSI0IiBjeT0iOS41IiByPSIxIiBmaWxsPSIjRkZBQUE2Ii8+PGNpcmNsZSBjeD0iMTIiIGN5PSI5LjUiIHI9IjEiIGZpbGw9IiNGRkFBQTYiLz48cGF0aCBkPSJNNi41IDExUTggMTIgOS41IDExIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
+
+        function startGame() {
+            placeFood();
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(updateGame, 160); 
+        }
+
+        function updateGame() {
+            // FIXED: Using snake[0] instead of flat snake object reference
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+            
+            if (head.x < 0) head.x = tileCount - 1;
+            if (head.x >= tileCount) head.x = 0;
+            if (head.y < 0) head.y = tileCount - 1;
+            if (head.y >= tileCount) head.y = 0;
+
+            for (let i = 0; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                document.getElementById("score").innerText = score;
+                
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("chiikawaHighScore", highScore);
+                    document.getElementById("high-score").innerText = highScore;
+                }
+                placeFood();
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Food
+            ctx.font = "14px Arial";
+            ctx.fillText("🍰", food.x * gridSize + 1, food.y * gridSize + 13);
+
+            // Draw Characters
+            for (let i = 0; i < snake.length; i++) {
+                let imgToDraw;
+                if (i === 0) {
+                    imgToDraw = hachiwareImg;  
+                } else if (i % 2 === 0) {
+                    imgToDraw = chiikawaImg;   
+                } else {
+                    imgToDraw = usagiImg;     
+                }
+                ctx.drawImage(imgToDraw, snake[i].x * gridSize, snake[i].y * gridSize, gridSize, gridSize);
+            }
+        }
+
+        function placeFood() {
+            if (snake.length >= tileCount * tileCount) {
+                gameWin();
+                return;
+            }
+
+            food.x = Math.floor(Math.random() * tileCount);
+            food.y = Math.floor(Math.random() * tileCount);
+            
+            for (let i = 0; i < snake.length; i++) {
+                if (food.x === snake[i].x && food.y === snake[i].y) {
+                    placeFood();
+                    break;
+                }
+            }
+        }
+
+        function gameWin() {
+            clearInterval(gameInterval);
+            alert("🏆 Incredible! You completely filled the grid and beat the game! You are a Chiikawa Master! 🎉");
+            resetBoard();
+        }
+
+        function gameOver() {
+            alert(`Game Over! Your Score: ${score}`);
+            resetBoard();
+        }
+
+        function resetBoard() {
+            snake = [{x: 10, y: 10}];
+            dx = 1; dy = 0;
+            score = 0;
+            document.getElementById("score").innerText = score;
+            startGame();
+        }
+
+        function changeDirection(dir) {
+            if (dir === "UP" && dy === 0) { dx = 0; dy = -1; }
+            if (dir === "DOWN" && dy === 0) { dx = 0; dy = 1; }
+            if (dir === "LEFT" && dx === 0) { dx = -1; dy = 0; }
+            if (dir === "RIGHT" && dx === 0) { dx = 1; dy = 0; }
+        }
+
+        window.addEventListener("keydown", e => {
+            if (e.key === "ArrowUp") changeDirection("UP");
+            if (e.key === "ArrowDown") changeDirection("DOWN");
+            if (e.key === "ArrowLeft") changeDirection("LEFT");
+            if (e.key === "ArrowRight") changeDirection("RIGHT");
+        });
+
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        });
+
+        let loadedCount = 0;
+        function checkLoad() {
+            loadedCount++;
+            if(loadedCount === 3) startGame();
+        }
+        hachiwareImg.onload = checkLoad;
+        chiikawaImg.onload = checkLoad;
