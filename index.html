@@ -43,13 +43,48 @@
             font-weight: bold;
             margin-bottom: 10px;
         }
+        .canvas-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+        }
         canvas {
             background-color: #FFFDF9;
             border: 4px solid #FFCCD5;
             border-radius: 12px;
             box-shadow: 0 6px 12px rgba(0,0,0,0.05);
-            max-width: 100%;
-            height: auto;
+            display: block;
+        }
+        /* Full overlay for the start screen menu */
+        .start-screen {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            bottom: 4px;
+            background-color: rgba(255, 253, 249, 0.95);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .start-btn {
+            background-color: #FF6B8B;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(255, 107, 139, 0.4);
+            cursor: pointer;
+            animation: pulse 1.5s infinite alternate;
+        }
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.08); }
         }
         .controls {
             display: grid;
@@ -91,7 +126,13 @@
         </div>
     </div>
     
-    <canvas id="gameCanvas" width="320" height="320"></canvas>
+    <div class="canvas-container">
+        <!-- Interactive Start Overlay Menu -->
+        <div id="startScreen" class="start-screen">
+            <button class="start-btn" onclick="pressStartButton()">TAP TO START 🎮</button>
+        </div>
+        <canvas id="gameCanvas" width="320" height="320"></canvas>
+    </div>
     
     <div class="controls">
         <div class="btn up" onclick="changeDirection('UP')">▲</div>
@@ -118,18 +159,35 @@
         let score = 0;
         let highScore = localStorage.getItem("chiikawaHighScore") || 0;
         let gameInterval;
+        let isPlaying = false;
 
         document.getElementById("high-score").innerText = highScore;
 
         // --- COMPATIBILITY BASE64 GRAPHICS ---
         const hachiwareImg = new Image();
-        hachiwareImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiLz48cGF0aCBkPSJNMSA1UTggLTEgMTUgNUwxNSAxUTggLTIgMSAxWiIgZmlsbD0iI0EwRTdFNSIvPjxjaXJjbGUgY3g9IjUiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PGNpcmNsZSBjeD0iMTEiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PHBhdGggZD0iTTUgMTBRIDggMTIgMTEgMTAiIHN0cm9rZT0iMomMMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjgiLz48L3N2Zz4=";
+        hachiwareImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiLz48cGF0aCBkPSJNMSA1UTggLTEgMTUgNUwxNSAxUTggLTIgMSAxWiIgZmlsbD0iI0EwRTdFNSIvPjxjaXJjbGUgY3g9IjUiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PGNpcmNsZSBjeD0iMTEiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PHBhdGggZD0iTTUgMTBRIDggMTIgMTEgMTAiIHN0cm9rZT0iIzMzMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjgiLz48L3N2Zz4=";
 
         const chiikawaImg = new Image();
-        chiikawaImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48Y2lyY2xlIGN4PSI1IiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9I0ExIiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjQiIGN5PSI4LjUiIHI9IjEiIGZpbGw9IiNGRkNDRDUiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPjxwYXRoIGQ9Ik02LjUgMTBRIDggMTEgOS41IDEwIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
+        chiikawaImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48Y2lyY2xlIGN4PSI1IiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjExIiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjQiIGN5PSI4LjUiIHI9IjEiIGZpbGw9IiNGRkNDRDUiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPjxwYXRoIGQ9Ik02LjUgMTBRIDggMTEgOS41IDEwIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
 
         const usagiImg = new Image();
-        usagiImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHJlY3QgeD0iMyIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48cmVjdCB4PSIxMSIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48Y2lyY2xlIGN4PSI4IiBjeT0iOSIgcj0iNi51IiBmaWxsPSIjRkZGNUUxIi8+PGNpcmNsZSBjeD0iNSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSIxMSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSI0IiBjeT0iOS41IiByPSIxIiBmaWxsPSIjRkZBQUE2Ii8+PGNpcmNsZSBjeD0iMTIiIGN5PSI5LjUiIHI9IjEiIGZpbGw9IiNGRkFBQTYiLz48cGF0aCBkPSJNNi41IDExUTggMTIgOS41IDExIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
+        usagiImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHJlY3QgeD0iMyIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48cmVjdCB4PSIxMSIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48Y2lyY2xlIGN4PSI4IiBjeT0iOSIgcj0iNi41IiBmaWxsPSIjRkZGNUUxIi8+PGNpcmNsZSBjeD0iNSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSIxMSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSI0IiBjeT0iOS41IiByPSIxIiBmaWxsPSIjRkZBQUE2Ii8+PGNpcmNsZSBjeD0iMTIiIGN5PSI5LjUiIHI9IjEiIGZpbGw9IiNGRkFBQTYiLz48cGF0aCBkPSJNNi41IDExUTggMTIgOS41IDExIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
+
+        // Initial setup drawing once graphics arrive
+        function initialSetupDraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw pastry target
+            ctx.font = "14px Arial";
+            ctx.fillText("🍰", food.x * gridSize + 1, food.y * gridSize + 13);
+            // Draw head position static placeholder
+            ctx.drawImage(hachiwareImg, snake[0].x * gridSize, snake[0].y * gridSize, gridSize, gridSize);
+        }
+
+        function pressStartButton() {
+            document.getElementById("startScreen").style.display = "none";
+            isPlaying = true;
+            startGame();
+        }
 
         function startGame() {
             placeFood();
@@ -138,7 +196,8 @@
         }
 
         function updateGame() {
-            // FIXED: Using snake[0] instead of flat snake object reference
+            if (!isPlaying) return;
+
             const head = {x: snake[0].x + dx, y: snake[0].y + dy};
             
             if (head.x < 0) head.x = tileCount - 1;
@@ -194,63 +253,3 @@
         }
 
         function placeFood() {
-            if (snake.length >= tileCount * tileCount) {
-                gameWin();
-                return;
-            }
-
-            food.x = Math.floor(Math.random() * tileCount);
-            food.y = Math.floor(Math.random() * tileCount);
-            
-            for (let i = 0; i < snake.length; i++) {
-                if (food.x === snake[i].x && food.y === snake[i].y) {
-                    placeFood();
-                    break;
-                }
-            }
-        }
-
-        function gameWin() {
-            clearInterval(gameInterval);
-            alert("🏆 Incredible! You completely filled the grid and beat the game! You are a Chiikawa Master! 🎉");
-            resetBoard();
-        }
-
-        function gameOver() {
-            alert(`Game Over! Your Score: ${score}`);
-            resetBoard();
-        }
-
-        function resetBoard() {
-            snake = [{x: 10, y: 10}];
-            dx = 1; dy = 0;
-            score = 0;
-            document.getElementById("score").innerText = score;
-            startGame();
-        }
-
-        function changeDirection(dir) {
-            if (dir === "UP" && dy === 0) { dx = 0; dy = -1; }
-            if (dir === "DOWN" && dy === 0) { dx = 0; dy = 1; }
-            if (dir === "LEFT" && dx === 0) { dx = -1; dy = 0; }
-            if (dir === "RIGHT" && dx === 0) { dx = 1; dy = 0; }
-        }
-
-        window.addEventListener("keydown", e => {
-            if (e.key === "ArrowUp") changeDirection("UP");
-            if (e.key === "ArrowDown") changeDirection("DOWN");
-            if (e.key === "ArrowLeft") changeDirection("LEFT");
-            if (e.key === "ArrowRight") changeDirection("RIGHT");
-        });
-
-        document.addEventListener('gesturestart', function (e) {
-            e.preventDefault();
-        });
-
-        let loadedCount = 0;
-        function checkLoad() {
-            loadedCount++;
-            if(loadedCount === 3) startGame();
-        }
-        hachiwareImg.onload = checkLoad;
-        chiikawaImg.onload = checkLoad;
