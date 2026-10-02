@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chiikawa's Sweet Snack Slither</title>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF6B8B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #FFEBF0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 10px;
+            overflow-y: auto; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        h1 { 
+            color: #FF6B8B; 
+            font-size: 22px; 
+            margin: 0 0 5px 0;
+        }
+        .score-container {
+            display: flex;
+            gap: 20px;
+            font-size: 16px;
+            color: #555;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .canvas-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+        }
+        canvas {
+            background-color: #FFFDF9;
+            border: 4px solid #FFCCD5;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+            display: block;
+        }
+        .start-screen {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            bottom: 4px;
+            background-color: #FFFDF9;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .chiikawa-btn-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+        .chiikawa-btn-face {
+            width: 90px;
+            height: 90px;
+            background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48Y2lyY2xlIGN4PSI1IiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjExIiBjeT0iNyIgcj0iMSIgZmlsb=bm9uZSIgc3Ryb2tlLXdpZHRoPSIxIi8+IDxwYXRoIGQ9Ik0xMC41IDcgUTExIDUuNSAxMS41IDciIHN0cm9rZT0iIzMzMyIgZmlsbD1ub25lIiBzdHJva2Utd2lkdGg9IjEiLz4gPGNpcmNsZSBjeD0iNCIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPiA8Y2lyY2xlIGN4PSIxMiIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPiA8cGF0aCBkPSJNNSA5LjUgUSA4IDEyIDExIDkuNSIgc3Ryb2tlPSIjMzMzIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjAuOCIvPjwvc3ZnPg==");
+            background-size: contain;
+            background-repeat: no-repeat;
+            transition: transform 0.1s ease;
+        }
+        .chiikawa-btn-text {
+            margin-top: 10px;
+            background-color: #FF6B8B;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 8px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .chiikawa-btn-container:active .chiikawa-btn-face {
+            transform: scale(0.92);
+            background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48Y2lyY2xlIGN4PSI1IiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjExIiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjQiIGN5PSI4LjUiIHI9IjEiIGZpbGw9IiNGRkNDRDUiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPjxwYXRoIGQ9Ik02LjUgMTBRIDggMTEgOS41IDEwIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+");
+        }
+        .chiikawa-btn-container:active .chiikawa-btn-text {
+            background-color: #E05372;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 65px);
+            grid-template-rows: repeat(3, 65px);
+            gap: 12px;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background-color: #FFFFFF;
+            border: 2px solid #FFCCD5;
+            border-radius: 50%;
+            color: #FF6B8B;
+            font-size: 26px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            cursor: pointer;
+            pointer-events: auto;
+            touch-action: manipulation; 
+        }
+        .btn:active {
+            background-color: #FFEBF0;
+            transform: scale(0.92);
+        }
+        .up { grid-column: 2; grid-row: 1; }
+        .left { grid-column: 1; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 3; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🍡 Chiikawa Snack Slither 🍰</h1>
+        <div class="score-container">
+            <div>Score: <span id="score">0</span></div>
+            <div>Best: <span id="high-score">0</span></div>
+        </div>
+    </div>
+    
+    <div class="canvas-container">
+        <div id="startScreen" class="start-screen">
+            <div class="chiikawa-btn-container" ontouchstart="pressStartButton(event)" onpointerdown="pressStartButton(event)" onclick="pressStartButton(event)">
+                <div class="chiikawa-btn-face"></div>
+                <div class="chiikawa-btn-text">TAP TO PLAY</div>
+            </div>
+        </div>
+        <canvas id="gameCanvas" width="320" height="320"></canvas>
+    </div>
+    
+    <div class="controls">
+        <div class="btn up" ontouchstart="changeDirection(event, 'UP')" onpointerdown="changeDirection(event, 'UP')">▲</div>
+        <div class="btn left" ontouchstart="changeDirection(event, 'LEFT')" onpointerdown="changeDirection(event, 'LEFT')">◀</div>
+        <div class="btn right" ontouchstart="changeDirection(event, 'RIGHT')" onpointerdown="changeDirection(event, 'RIGHT')">▶</div>
+        <div class="btn down" ontouchstart="changeDirection(event, 'DOWN')" onpointerdown="changeDirection(event, 'DOWN')">▼</div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const gridSize = 16; 
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [{x: 10, y: 10}]; 
+        let food = {x: 5, y: 5};
+        let dx = 1; 
+        let dy = 0;
+        let score = 0;
+        let highScore = localStorage.getItem("chiikawaHighScore") || 0;
+        let gameInterval;
+        let isPlaying = false;
+
+        document.getElementById("high-score").innerText = highScore;
+
+        const hachiwareImg = new Image();
+        hachiwareImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiLz48cGF0aCBkPSJNMSA1UTggLTEgMTUgNUwxNSAxUTggLTIgMSAxWiIgZmlsbD0iI0EwRTdFNSIvPjxjaXJjbGUgY3g9IjUiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PGNpcmNsZSBjeD0iMTEiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PHBhdGggZD0iTTUgMTBRIDggMTIgMTEgMTAiIHN0cm9rZT0iIzMzMyIgZmlsbD1ub25lIiBzdHJva2Utd2lkdGg9IjAuOCIvPjwvc3ZnPg==";
+
+        const chiikawaImg = new Image();
+        chiikawaImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48Y2lyY2xlIGN4PSI1IiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjExIiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjQiIGN5PSI4LjUiIHI9IjEiIGZpbGw9IiNGRkNDRDUiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPjxwYXRoIGQ9Ik02LjUgMTBRIDggMTEgOS41IDEwIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
+
+        const usagiImg = new Image();
+        usagiImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHJlY3QgeD0iMyIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48cmVjdCB4PSIxMSIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48Y2lyY2xlIGN4PSI4IiBjeT0iOSIgcj0iNi41IiBmaWxsPSIjRkZGNUUxIi8+PGNpcmNsZSBjeD0iNSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSIxMSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSI0IiBjeT0iOS41IiByPSIxIiBmaWxsPSIjRkZBQUE2Ii8+PGNpcmNsZSBjeD0iMTIiIGN5PSI5LjUiIHI9IjEiIGZpbGw9IiNGRkFBQTYiLz48cGF0aCBkPSJNNi41IDExUTggMTIgOS41IDExIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
+
+        function initialSetupDraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = "14px Arial";
+            ctx.fillText("🍰", food.x * gridSize + 1, food.y * gridSize + 13);
+            ctx.drawImage(hachiwareImg, snake[0].x * gridSize, snake[0].y * gridSize, gridSize, gridSize);
+        }
+
+        function pressStartButton(event) {
+            if (event) event.preventDefault();
+            document.getElementById("startScreen").style.display = "none";
+            if (!isPlaying) {
+                isPlaying = true;
+                startGame();
+            }
+        }
+
+        function startGame() {
+            placeFood();
