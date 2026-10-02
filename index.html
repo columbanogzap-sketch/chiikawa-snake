@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chiikawa's Sweet Snack Slither</title>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF6B8B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: none; /* Prevents mobile browser page scrolling while gaming */
+        }
+        body {
+            background-color: #FFEBF0; /* Pastel Pink background */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            overflow: hidden;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        h1 { 
+            color: #FF6B8B; 
+            font-size: 22px; 
+            margin: 0 0 5px 0;
+        }
+        .score-container {
+            display: flex;
+            gap: 20px;
+            font-size: 16px;
+            color: #555;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .canvas-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+        }
+        canvas {
+            background-color: #FFFDF9;
+            border: 4px solid #FFCCD5;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+            display: block;
+        }
+        .start-screen {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            bottom: 4px;
+            background-color: #FFFDF9;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .chiikawa-btn-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+        .chiikawa-btn-face-vector {
+            width: 90px;
+            height: 90px;
+            background-color: #FFFFFF;
+            border: 2px solid #FFCCD5;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+        .chiikawa-btn-face-vector::before, .chiikawa-btn-face-vector::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background-color: #333333;
+            border-radius: 50%;
+            top: 35px;
+        }
+        .chiikawa-btn-face-vector::before { left: 26px; }
+        .chiikawa-btn-face-vector::after { right: 26px; }
+        
+        .chiikawa-blush-left, .chiikawa-blush-right {
+            position: absolute;
+            width: 10px;
+            height: 6px;
+            background-color: #FFCCD5;
+            border-radius: 50%;
+            top: 44px;
+        }
+        .chiikawa-blush-left { left: 16px; }
+        .chiikawa-blush-right { right: 16px; }
+
+        .chiikawa-mouth-vector {
+            position: absolute;
+            width: 12px;
+            height: 6px;
+            border: 2px solid #333333;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            top: 52px;
+            left: 39px;
+        }
+        .chiikawa-btn-text {
+            margin-top: 15px;
+            background-color: #FF6B8B;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 8px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .chiikawa-btn-container:active .chiikawa-btn-face-vector {
+            transform: scale(0.94);
+            background-color: #FFEBF0;
+        }
+        .instructions {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #888;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🍡 Chiikawa Snack Slither 🍰</h1>
+        <div class="score-container">
+            <div>Score: <span id="score">0</span></div>
+            <div>Best: <span id="high-score">0</span></div>
+        </div>
+    </div>
+    
+    <div class="canvas-container" id="swipeArea">
+        <!-- Interactive Start Overlay Menu -->
+        <div id="startScreen" class="start-screen">
+            <div class="chiikawa-btn-container" onpointerdown="pressStartButton(event)" onclick="pressStartButton(event)">
+                <div class="chiikawa-btn-face-vector">
+                    <div class="chiikawa-blush-left"></div>
+                    <div class="chiikawa-blush-right"></div>
+                    <div class="chiikawa-mouth-vector"></div>
+                </div>
+                <div class="chiikawa-btn-text">TAP TO PLAY</div>
+            </div>
+        </div>
+        <canvas id="gameCanvas" width="320" height="320"></canvas>
+    </div>
+
+    <div class="instructions">📱 Swipe anywhere on the box to turn!</div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const gridSize = 16; 
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [{x: 10, y: 10}]; 
+        let food = {x: 5, y: 5};
+        let dx = 1; 
+        let dy = 0;
+        let score = 0;
+        let highScore = localStorage.getItem("chiikawaHighScore") || 0;
+        let gameInterval;
+        let isPlaying = false;
+
+        document.getElementById("high-score").innerText = highScore;
+
+        // Native Canvas Renderer Functions for Copyright-Free Characters
+        function drawHachiwareFace(x, y, size) {
+            // White head base
+            ctx.fillStyle = "#FFFFFF";
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + size/2, size/2 - 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Blue ears/wig pattern
+            ctx.fillStyle = "#A0E7E5";
+            ctx.beginPath();
+            ctx.moveTo(x + 1, y + size/3);
+            ctx.quadraticCurveTo(x + size/2, y - 2, x + size - 1, y + size/3);
+            ctx.lineTo(x + size - 1, y + 1);
+            ctx.quadraticCurveTo(x + size/2, y - 3, x + 1, y + 1);
+            ctx.closePath();
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = "#333333";
+            ctx.fillRect(x + 4, y + 6, 1.5, 2);
+            ctx.fillRect(x + size - 5.5, y + 6, 1.5, 2);
+
+            // Smile mouth
+            ctx.strokeStyle = "#333333";
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + 9, 2, 0, Math.PI);
+            ctx.stroke();
+        }
+
+        function drawChiikawaFace(x, y, size) {
+            // White head base
+            ctx.fillStyle = "#FFFFFF";
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + size/2, size/2 - 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Rosy Blushing Cheeks
+            ctx.fillStyle = "#FFCCD5";
+            ctx.beginPath();
+            ctx.arc(x + 2.5, y + size/2 + 1, 2, 0, Math.PI * 2);
+            ctx.arc(x + size - 2.5, y + size/2 + 1, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = "#333333";
+            ctx.fillRect(x + 4, y + 6, 1.5, 2);
+            ctx.fillRect(x + size - 5.5, y + 6, 1.5, 2);
+
+            // Smile mouth
+            ctx.strokeStyle = "#333333";
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + 9, 1.5, 0, Math.PI);
+            ctx.stroke();
+        }
+
+        function drawUsagiFace(x, y, size) {
+            // Long Bunny Ears
+            ctx.fillStyle = "#FFF5E1";
+            ctx.fillRect(x + 3, y, 2.5, 5);
+            ctx.fillRect(x + size - 5.5, y, 2.5, 5);
+
+            // Soft Yellow head base
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + size/2 + 2, size/2 - 1, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = "#333333";
+            ctx.fillRect(x + 4, y + 7, 1.5, 2);
+            ctx.fillRect(x + size - 5.5, y + 7, 1.5, 2);
+
+            // Mouth
+            ctx.strokeStyle = "#333333";
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + 10, 1.5, 0, Math.PI);
+            ctx.stroke();
+        }
+
+        function initialSetupDraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Render Target Pastry
+            ctx.font = "14px Arial";
+            ctx.fillText("🍰", food.x * gridSize + 1, food.y * gridSize + 13);
+            // Render static placeholder character head
+            drawHachiwareFace(snake[0].x * gridSize, snake[0].y * gridSize, gridSize);
+        }
+
+        function pressStartButton(event) {
+            if (event) event.preventDefault();
+            document.getElementById("startScreen").style.display = "none";
+            if (!isPlaying) {
+                isPlaying = true;
+                startGame();
+            }
+        }
+
+        function startGame() {
+            placeFood();
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(updateGame, 160); 
+        }
+
+        function updateGame() {
+            if (!isPlaying) return;
+
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+            
+            if (head.x < 0) head.x = tileCount - 1;
+            if (head.x >= tileCount) head.x = 0;
+            if (head.y < 0) head.y = tileCount - 1;
