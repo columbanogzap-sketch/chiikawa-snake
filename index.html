@@ -98,7 +98,7 @@
         /* Clean tap animation without blur effects */
         .chiikawa-btn-container:active .chiikawa-btn-face {
             transform: scale(0.92);
-            background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48cGF0aCBkPSJNNC41IDcgUTUgNS41IDUuNSA3IiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0xMC41IDcgUTExIDUuNSAxMS41IDciIHN0cm9rZT0iIzMzMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PGNpcmNsZSBjeD0iNCIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iOC41IiByPSIxIiBmaWxsPSIjRkZDQ0Q1Ii8+PHBhdGggZD0iTTUgOS41IFEgOCAxMiAxMSA5LjUiIHN0cm9rZT0iIzMzMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjgiLz48L3N2Zz4=");
+            background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz4gPHBhdGggZD0iTTQuNSA3IFEgNSA1LjUgNS41IDciIHN0cm9rZT0iIzMzMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIi8+IAxwYXRoIGQ9Ik0xMC41IDcgUTExIDUuNSAxMS41IDciIHN0cm9rZT0iIzMzMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIi8+IDxjaXJjbGUgY3g9IjQiIGN5PSI4LjUiIHI9IjEiIGZpbGw9IiNGRkNDRDUiLz4gPGNpcmNsZSBjeD0iMTIiIGN5PSIguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPiA8cGF0aCBkPSJNNSA5LjUgUSA4IDEyIDExIDkuNSIgc3Ryb2tlPSIjMzMzIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjAuOCIvPjwvc3ZnPg==");
         }
         .chiikawa-btn-container:active .chiikawa-btn-text {
             background-color: #E05372;
@@ -149,7 +149,7 @@
     <div class="canvas-container">
         <!-- Interactive Start Overlay Menu -->
         <div id="startScreen" class="start-screen">
-            <div class="chiikawa-btn-container" onpointerdown="pressStartButton()" onclick="pressStartButton()">
+            <div class="chiikawa-btn-container" ontouchstart="pressStartButton(event)" onpointerdown="pressStartButton(event)" onclick="pressStartButton(event)">
                 <div class="chiikawa-btn-face"></div>
                 <div class="chiikawa-btn-text">TAP TO PLAY</div>
             </div>
@@ -158,10 +158,11 @@
     </div>
     
     <div class="controls">
-        <div class="btn up" onpointerdown="changeDirection('UP')">▲</div>
-        <div class="btn left" onpointerdown="changeDirection('LEFT')">◀</div>
-        <div class="btn right" onpointerdown="changeDirection('RIGHT')">▶</div>
-        <div class="btn down" onpointerdown="changeDirection('DOWN')">▼</div>
+        <!-- FIXED: Re-wired to explicitly use touchstart triggers to stop mobile click lagging -->
+        <div class="btn up" ontouchstart="changeDirection(event, 'UP')" onpointerdown="changeDirection(event, 'UP')">▲</div>
+        <div class="btn left" ontouchstart="changeDirection(event, 'LEFT')" onpointerdown="changeDirection(event, 'LEFT')">◀</div>
+        <div class="btn right" ontouchstart="changeDirection(event, 'RIGHT')" onpointerdown="changeDirection(event, 'RIGHT')">▶</div>
+        <div class="btn down" ontouchstart="changeDirection(event, 'DOWN')" onpointerdown="changeDirection(event, 'DOWN')">▼</div>
     </div>
 
     <script>
@@ -191,7 +192,7 @@
         hachiwareImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiLz48cGF0aCBkPSJNMSA1UTggLTEgMTUgNUwxNSAxUTggLTIgMSAxWiIgZmlsbD0iI0EwRTdFNSIvPjxjaXJjbGUgY3g9IjUiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PGNpcmNsZSBjeD0iMTEiIGN5PSI3IiByPSIxIiBmaWxsPSIjMzMzIi8+PHBhdGggZD0iTTUgMTBRIDggMTIgMTEgMTAiIHN0cm9rZT0iIzMzMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIwLjgiLz48L3N2Zz4=";
 
         const chiikawaImg = new Image();
-        chiikawaImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48Y2lyY2xlIGN4PSI1IiBjeT0iNyIgcj0iMSIgZmlsb+eM00MyIvPjxjaXJjbGUgY3g9IjExIiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjQiIGN5PSI4LjUiIHI9IjEiIGZpbGw9IiNGRkNDRDUiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPjxwYXRoIGQ9Ik02LjUgMTBRIDggMTEgOS41IDEwIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
+        chiikawaImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI0ZGQ0NENSIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48Y2lyY2xlIGN4PSI1IiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjExIiBjeT0iNyIgcj0iMSIgZmlsbD0iIzMzMyIvPjxjaXJjbGUgY3g9IjQiIGN5PSI4LjUiIHI9IjEiIGZpbGw9IiNGRkNDRDUiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjguNSIgcj0iMSIgZmlsbD0iI0ZGQ0NENSIvPjxwYXRoIGQ9Ik02LjUgMTBRIDggMTEgOS41IDEwIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
 
         const usagiImg = new Image();
         usagiImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHJlY3QgeD0iMyIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48cmVjdCB4PSIxMSIgeT0iMCIgd2lkdGg9IjIiIGhlaWdodD0iNSIgcng9IjEiIGZpbGw9IiNGRkY1RTEiLz48Y2lyY2xlIGN4PSI4IiBjeT0iOSIgcj0iNi41IiBmaWxsPSIjRkZGNUUxIi8+PGNpcmNsZSBjeD0iNSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSIxMSIgY3k9IjgiIHI9IjEiIGZpbGw9IiMzMzMiLz48Y2lyY2xlIGN4PSI0IiBjeT0iOS41IiByPSIxIiBmaWxsPSIjRkZBQUE2Ii8+PGNpcmNsZSBjeD0iMTIiIGN5PSI5LjUiIHI9IjEiIGZpbGw9IiNGRkFBQTYiLz48cGF0aCBkPSJNNi41IDExUTggMTIgOS41IDExIiBzdHJva2U9IiMzMzMiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMC44Ii8+PC9zdmc+";
@@ -200,20 +201,21 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.font = "14px Arial";
             ctx.fillText("🍰", food.x * gridSize + 1, food.y * gridSize + 13);
-            // FIXED: Using index [0] to read list position properly
-            ctx.drawImage(hachiwareImg, snake[0].x * gridSize, snake[0].y * gridSize, gridSize, gridSize);
-        }
+            // FIXED: Reference snake index position correctly
+    ctx.drawImage(hachiwareImg, snake[0].x * gridSize, snake[0].y * gridSize, gridSize, gridSize);
+}
 
-        function pressStartButton() {
-            document.getElementById("startScreen").style.display = "none";
-            if (!isPlaying) {
-                isPlaying = true;
-                startGame();
-            }
-        }
+function pressStartButton(event) {
+    if (event) event.preventDefault();
+    document.getElementById("startScreen").style.display = "none";
+    if (!isPlaying) {
+        isPlaying = true;
+        startGame();
+    }
+}
 
-        function startGame() {
-            placeFood();
+function startGame() {
+    placeFood();
     if (gameInterval) clearInterval(gameInterval);
     gameInterval = setInterval(updateGame, 160); 
 }
@@ -221,7 +223,7 @@
 function updateGame() {
     if (!isPlaying) return;
 
-    // FIXED: Correctly tracking head via explicit array index index [0]
+    // FIXED: Properly references the first element of the array array using [0]
     const head = {x: snake[0].x + dx, y: snake[0].y + dy};
     
     if (head.x < 0) head.x = tileCount - 1;
@@ -287,8 +289,8 @@ function placeFood() {
         if (food.x === snake[i].x && food.y === snake[i].y) {
             placeFood();
             break;
-                }
-            }
+        }
+    }
 }
 
 function gameWin() {
@@ -301,7 +303,7 @@ function gameWin() {
 function gameOver() {
     isPlaying = false;
     clearInterval(gameInterval);
-    // FIXED: Re-added missing template literal backticks around alert string
+    // FIXED: Re-added missing template backticks around the text string
     alert(`Game Over! Your Score: ${score}`);
     resetBoard();
 }
@@ -315,7 +317,8 @@ function resetBoard() {
     initialSetupDraw();
 }
 
-function changeDirection(dir) {
+function changeDirection(event, dir) {
+    if (event) event.preventDefault(); // Stop native ghost clicks
     if (!isPlaying) return;
     if (dir === "UP" && dy === 0) { dx = 0; dy = -1; }
     if (dir === "DOWN" && dy === 0) { dx = 0; dy = 1; }
@@ -324,10 +327,10 @@ function changeDirection(dir) {
 }
 
 window.addEventListener("keydown", e => {
-    if (e.key === "ArrowUp") changeDirection("UP");
-    if (e.key === "ArrowDown") changeDirection("DOWN");
-    if (e.key === "ArrowLeft") changeDirection("LEFT");
-    if (e.key === "ArrowRight") changeDirection("RIGHT");
+    if (e.key === "ArrowUp") changeDirection(null, "UP");
+    if (e.key === "ArrowDown") changeDirection(null, "DOWN");
+    if (e.key === "ArrowLeft") changeDirection(null, "LEFT");
+    if (e.key === "ArrowRight") changeDirection(null, "RIGHT");
 });
 
 let loadedCount = 0;
