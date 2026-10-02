@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chiikawa's Sweet Snack Slither</title>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF6B8B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            background-color: #FFEBF0; /* Pastel Pink background */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            overflow: hidden;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        h1 { 
+            color: #FF6B8B; 
+            font-size: 22px; 
+            margin: 0 0 5px 0;
+        }
+        .score-container {
+            display: flex;
+            gap: 20px;
+            font-size: 16px;
+            color: #555;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        canvas {
+            background-color: #FFFDF9;
+            border: 4px solid #FFCCD5;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+            max-width: 100%;
+            height: auto;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 65px);
+            grid-template-rows: repeat(3, 65px);
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .btn {
+            background-color: #FFFFFF;
+            border: 2px solid #FFCCD5;
+            border-radius: 50%;
+            color: #FF6B8B;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            cursor: pointer;
+        }
+        .btn:active {
+            background-color: #FFEBF0;
+            transform: scale(0.95);
+        }
+        .up { grid-column: 2; grid-row: 1; }
+        .left { grid-column: 1; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 3; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🍡 Chiikawa Snack Slither 🍰</h1>
+        <div class="score-container">
+            <div>Score: <span id="score">0</span></div>
+            <div>Best: <span id="high-score">0</span></div>
+        </div>
+    </div>
+    
+    <canvas id="gameCanvas" width="320" height="320"></canvas>
+    
+    <div class="controls">
+        <div class="btn up" onclick="changeDirection('UP')">▲</div>
+        <div class="btn left" onclick="changeDirection('LEFT')">◀</div>
+        <div class="btn right" onclick="changeDirection('RIGHT')">▶</div>
+        <div class="btn down" onclick="changeDirection('DOWN')">▼</div>
+    </div>
+
+    <script>
+        // PWA Offline registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const gridSize = 16; 
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [{x: 10, y: 10}]; 
+        let food = {x: 5, y: 5};
+        let dx = 1; 
+        let dy = 0;
+        let score = 0;
+        let highScore = localStorage.getItem("chiikawaHighScore") || 0;
+        let gameInterval;
+
+        document.getElementById("high-score").innerText = highScore;
+
+        // --- OFFLINE EMBEDDED GRAPHICS SETUP ---
+        // These are low-weight embedded SVG graphics that load completely offline.
+        const hachiwareImg = new Image();
+        hachiwareImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://w3.org' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%23ffffff'/><path d='M1 5 Q 8 -1 15 5 L 15 1 Q 8 -2 1 1 Z' fill='%23A0E7E5'/><circle cx='5' cy='7' r='1' fill='%23333'/><circle cx='11' cy='7' r='1' fill='%23333'/><path d='M6 10 Q 8 12 10 10' stroke='%23333' fill='none' stroke-width='0.8'/></svg>";
+
+        const chiikawaImg = new Image();
+        chiikawaImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://w3.org' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%23ffffff' stroke='%23FFCCD5' stroke-width='0.5'/><circle cx='5' cy='7' r='1' fill='%23333'/><circle cx='11' cy='7' r='1' fill='%23333'/><circle cx='4' cy='8.5' r='1' fill='%23FFCCD5'/><circle cx='12' cy='8.5' r='1' fill='%23FFCCD5'/><path d='M7 10 Q 8 11 9 10' stroke='%23333' fill='none' stroke-width='0.8'/></svg>";
+
+        const usagiImg = new Image();
+        usagiImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://w3.org' viewBox='0 0 16 16'><rect x='3' y='0' width='2' height='5' rx='1' fill='%23FFF5E1'/><rect x='11' y='0' width='2' height='5' rx='1' fill='%23FFF5E1'/><circle cx='8' cy='9' r='6.5' fill='%23FFF5E1'/><circle cx='5' cy='8' r='1' fill='%23333'/><circle cx='11' cy='8' r='1' fill='%23333'/><circle cx='4' cy='9.5' r='1' fill='%23FFAAA6'/><circle cx='12' cy='9.5' r='1' fill='%23FFAAA6'/><path d='M7 11 Q 8 12 9 11' stroke='%23333' fill='none' stroke-width='0.8'/></svg>";
+
+        function startGame() {
+            placeFood();
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(updateGame, 160); 
+        }
+
+        function updateGame() {
+            const head = {x: snake.x + dx, y: snake.y + dy};
+            
+            if (head.x < 0) head.x = tileCount - 1;
+            if (head.x >= tileCount) head.x = 0;
+            if (head.y < 0) head.y = tileCount - 1;
+            if (head.y >= tileCount) head.y = 0;
+
+            for (let i = 0; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                document.getElementById("score").innerText = score;
+                
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("chiikawaHighScore", highScore);
+                    document.getElementById("high-score").innerText = highScore;
+                }
+                placeFood();
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Pastry Target
+            ctx.font = "14px Arial";
+            ctx.fillText("🍰", food.x * gridSize + 1, food.y * gridSize + 13);
+
+            // Draw Snake using Character Photos/Graphics
+            for (let i = 0; i < snake.length; i++) {
+                let imgToDraw;
+                
+                if (i === 0) {
+                    imgToDraw = hachiwareImg;  // Leader is always Hachiware
+                } else if (i % 2 === 0) {
+                    imgToDraw = chiikawaImg;   // Alternates body character 1
+                } else {
+                    imgToDraw = usagiImg;     // Alternates body character 2
+                }
+
+                // Render image assets smoothly onto canvas tiles
+                ctx.drawImage(imgToDraw, snake[i].x * gridSize, snake[i].y * gridSize, gridSize, gridSize);
+            }
+        }
+
+        function placeFood() {
+            if (snake.length >= tileCount * tileCount) {
+                gameWin();
+                return;
+            }
+
+            food.x = Math.floor(Math.random() * tileCount);
+            food.y = Math.floor(Math.random() * tileCount);
+            
+            for (let i = 0; i < snake.length; i++) {
+                if (food.x === snake[i].x && food.y === snake[i].y) {
+                    placeFood();
+                    break;
+                }
+            }
+        }
+
+        function gameWin() {
+            clearInterval(gameInterval);
+            alert("🏆 Incredible! You completely filled the grid and beat the game! You are a Chiikawa Master! 🎉");
+            resetBoard();
+        }
+
+        function gameOver() {
+            alert(`Game Over! Your Score: ${score}`);
+            resetBoard();
+        }
+
+        function resetBoard() {
+            snake = [{x: 10, y: 10}];
+            dx = 1; dy = 0;
+            score = 0;
+            document.getElementById("score").innerText = score;
+            startGame();
+        }
+
+        function changeDirection(dir) {
+            if (dir === "UP" && dy === 0) { dx = 0; dy = -1; }
+            if (dir === "DOWN" && dy === 0) { dx = 0; dy = 1; }
+            if (dir === "LEFT" && dx === 0) { dx = -1; dy = 0; }
+            if (dir === "RIGHT" && dx === 0) { dx = 1; dy = 0; }
+        }
+
+        window.addEventListener("keydown", e => {
+            if (e.key === "ArrowUp") changeDirection("UP");
+            if (e.key === "ArrowDown") changeDirection("DOWN");
+            if (e.key === "ArrowLeft") changeDirection("LEFT");
+            if (e.key === "ArrowRight") changeDirection("RIGHT");
+        });
+
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        });
+
+        // Ensure images are fully cached by the canvas before starting the loop
+        Promise.all([
+            new Promise(r => hachiwareImg.onload = r),
+            new Promise(r => chiikawaImg.onload = r),
+            new Promise(r => usagiImg.onload = r)
+        ]).then(() => {
+            startGame();
+        });
+    </script>
+</body>
+</html>
